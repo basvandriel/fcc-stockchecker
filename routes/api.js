@@ -36,13 +36,13 @@ module.exports = function (app) {
       const like = JSON.parse(req.query['like'])
       const response = await fetch(`https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/${symbol}/quote`)
 
-      // If it finds something
-      if(await response.text() == '"Invalid symbol"') {
-        return
-      }
+      const json = await response.json()
+
+      // Bad input
+      if(json == 'Invalid symbol') return
 
       // Re-name the json result
-      const { symbol: stock, latestPrice: price } = await response.json()
+      const { symbol: stock, latestPrice: price } = json
 
       let doc = await Stock.findOne({ name: stock }).exec();
 
@@ -50,12 +50,12 @@ module.exports = function (app) {
         doc = new Stock({ name: stock, likes: like ? 1 : 0 })
         await doc.save()
       }
-      const likes = doc['likes'] ?? 0
 
       if(like) {
-        doc.likes = likes + 1
+        doc.likes = (doc['likes'] ?? 0) + 1
         await doc.save()
       }
+      
       return res.json({ "stockData": { stock, price, likes: doc.likes }});
     });
 };
