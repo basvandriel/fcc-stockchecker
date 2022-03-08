@@ -1,6 +1,6 @@
 'use strict';
 
-const fetch = (url) => import('node-fetch').then(({default: fetch}) => fetch(url));
+const fetch = require('../lib/fetchProxy')
 
 const Stock = require('../lib/stock')
 const IP = require('../lib/ip')
@@ -19,7 +19,7 @@ module.exports = function (app) {
 
       // bool-check the like
       const like = JSON.parse(req.query['like'])
-      const response = await fetch(`https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/${symbol}/quote`)
+      const response = await fetch(symbol)
 
       const json = await response.json()
 
