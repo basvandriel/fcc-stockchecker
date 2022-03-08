@@ -27,24 +27,28 @@ module.exports = function (app) {
       if(json == 'Invalid symbol') return
 
       // Re-name the json result
-      const { symbol: stock, latestPrice: price } = json
+      const { symbol: name, latestPrice: price } = json
 
-      let doc = await Stock.findOne({ name: stock }).exec();
+      let stock = await Stock.findOne({ name }).exec();
 
       // If the stock can't be find, assign it to a new one
-      if(!doc) doc = new Stock({ name: stock, likes: like ? 1 : 0 })
+      if(!stock) stock = new Stock({ name })
+      
+      // Save the stock
+      await stock.save()
     
-      const foundIP = await IP.findOne({ value: ip }).exec()
-
       // Implement IP logic
-      if(like && !foundIP)  {
-        const newIP = new IP({ value: ip })
-        await newIP.save()
+      // Check if the like boolean is there and if the ip doesn't exist already in the likes
+      if(like && !await IP.findOne({ value: ip, liked_stocks: {'_id': stock._id } }).exec())  {
+        // Look up the ip if it exists, else upsert with pushed stock id
+        const ipModel = await IP.findOneAndUpdate({ value: ip }, { $push: { liked_stocks: stock._id }}, {
+          new: true,
+          upsert: true
+        })
 
-        doc.likes = (doc['likes'] ?? 0) + 1
+        await Stock.updateOne({ _id: stock._id, name }, { $push: { likes: ipModel._id }})
       }
-      await doc.save()
 
-      return res.json({ "stockData": { stock, price, likes: doc.likes }});
+      return res.json({ "stockData": { stock: name, price, likes: stock.likes.length }});
     });
 };
