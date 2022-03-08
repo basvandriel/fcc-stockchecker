@@ -31,10 +31,9 @@ module.exports = function (app) {
 
       let doc = await Stock.findOne({ name: stock }).exec();
 
-      if(!doc) {
-        doc = new Stock({ name: stock, likes: like ? 1 : 0 })
-      }
-
+      // If the stock can't be find, assign it to a new one
+      if(!doc) doc = new Stock({ name: stock, likes: like ? 1 : 0 })
+    
       const foundIP = await IP.findOne({ value: ip }).exec()
 
       // Implement IP logic
