@@ -15,36 +15,35 @@ module.exports = function (app) {
     .get(async function (req, res) {
       var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress 
 
-      const symbol = req.query['stock']
-
       // bool-check the like
       const like = JSON.parse(req.query['like'])
-      const response = await fetch(symbol)
+      const response = await fetch(req.query['stock'])
 
       const json = await response.json()
 
       // Bad input
-      if(json == 'Invalid symbol') return
+      if(json == 'Invalid symbol' || json == 'Unknown symbol') return 
 
       // Re-name the json result
-      const { symbol: name, latestPrice: price } = json
+      const { symbol, latestPrice: price } = json
 
       const upsertOptions = { new: true, upsert: true}
-      const stock = await Stock.findOneAndUpdate({ name }, { $set: { name }}, upsertOptions)
+      const stock = await Stock.findOneAndUpdate({ symbol }, { $set: { symbol }}, upsertOptions)
 
       let likes = stock.likes.length
 
       // Implement IP logic
       // Check if the like boolean is there and if the ip doesn't exist already in the likes
       if(like && !await IP.findOne({ value: ip, liked_stocks: {'_id': stock._id } }).exec())  {
+        likes++
+
         // Look up the ip if it exists, else upsert with pushed stock id
         const ipModel = await IP.findOneAndUpdate({ value: ip }, 
           { $push: { liked_stocks: stock._id }}, upsertOptions
         )
-        await Stock.updateOne({ _id: stock._id, name }, { $push: { likes: ipModel._id }})
-        likes++
+        await Stock.updateOne({ _id: stock._id, symbol }, { $push: { likes: ipModel._id }})
       }
 
-      return res.json({ "stockData": { stock: name, price, likes }});
+      return res.json({ "stockData": { stock: symbol, price, likes }});
     });
 };
