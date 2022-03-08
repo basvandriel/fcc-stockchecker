@@ -29,26 +29,22 @@ module.exports = function (app) {
       // Re-name the json result
       const { symbol: name, latestPrice: price } = json
 
-      let stock = await Stock.findOne({ name }).exec();
+      const upsertOptions = { new: true, upsert: true}
+      const stock = await Stock.findOneAndUpdate({ name }, { $set: { name }}, upsertOptions)
 
-      // If the stock can't be find, assign it to a new one
-      if(!stock) stock = new Stock({ name })
-      
-      // Save the stock
-      await stock.save()
-    
+      let likes = stock.likes.length
+
       // Implement IP logic
       // Check if the like boolean is there and if the ip doesn't exist already in the likes
       if(like && !await IP.findOne({ value: ip, liked_stocks: {'_id': stock._id } }).exec())  {
         // Look up the ip if it exists, else upsert with pushed stock id
-        const ipModel = await IP.findOneAndUpdate({ value: ip }, { $push: { liked_stocks: stock._id }}, {
-          new: true,
-          upsert: true
-        })
-
+        const ipModel = await IP.findOneAndUpdate({ value: ip }, 
+          { $push: { liked_stocks: stock._id }}, upsertOptions
+        )
         await Stock.updateOne({ _id: stock._id, name }, { $push: { likes: ipModel._id }})
+        likes++
       }
 
-      return res.json({ "stockData": { stock: name, price, likes: stock.likes.length }});
+      return res.json({ "stockData": { stock: name, price, likes }});
     });
 };
