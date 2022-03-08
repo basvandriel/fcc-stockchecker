@@ -1,35 +1,20 @@
 'use strict';
 
-const mongoose = require('mongoose');
 const fetch = (url) => import('node-fetch').then(({default: fetch}) => fetch(url));
 
+const Stock = require('../lib/stock')
+const IP = require('../lib/ip')
 
-module.exports = function (app) {
-  var mongoDB = 'mongodb://127.0.0.1/fcc-stockchecker';
-  mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true});
 
-  const schema = new mongoose.Schema({ name: 'string', likes: 'number' });
-  schema.statics.findOneOrCreate = function findOneOrCreate(condition, callback) {
-    const self = this
-    self.findOne(condition, (err, result) => {
-        return result ? callback(err, result) : self.create(condition, (err, result) => { return callback(err, result) })
-    })
-  }
-  const Stock = mongoose.model('Stock', schema);
-
-  //Get the default connection
-  var db = mongoose.connection;
-  
-  //Bind connection to error event (to get notification of connection errors)
-  db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-
-  
+module.exports = function (app) {  
   // Usage:
   // GET https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/[symbol]/quote
   // Where:
   // symbol = msft | goog | aapl | ...
   app.route('/api/stock-prices')
     .get(async function (req, res) {
+      var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress 
+
       const symbol = req.query['stock']
 
       // bool-check the like
@@ -48,14 +33,19 @@ module.exports = function (app) {
 
       if(!doc) {
         doc = new Stock({ name: stock, likes: like ? 1 : 0 })
-        await doc.save()
       }
 
-      if(like) {
+      const foundIP = await IP.findOne({ value: ip }).exec()
+
+      // Implement IP logic
+      if(like && !foundIP)  {
+        const newIP = new IP({ value: ip })
+        await newIP.save()
+
         doc.likes = (doc['likes'] ?? 0) + 1
-        await doc.save()
       }
-      
+      await doc.save()
+
       return res.json({ "stockData": { stock, price, likes: doc.likes }});
     });
 };
