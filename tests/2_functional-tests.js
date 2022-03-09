@@ -9,6 +9,8 @@ const Stock = require('../lib/stock')
 chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
+  this.timeout(60000);
+
   afterEach((done) => {
     IP.deleteMany({}).then(() => {
       Stock.deleteMany({}, done)
