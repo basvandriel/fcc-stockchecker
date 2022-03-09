@@ -6,18 +6,6 @@ const Stock = require('../lib/stock')
 const IP = require('../lib/ip')
 
 
-class StockData {
-    name;
-    price;
-    likes;
-
-    constructor(name, price, likes) {
-      self.name = name;
-      self.price = price;
-      self.likes = likes
-    }
-}
-
 const resolveStockData = async (name, like, ip) => {
   const response = await fetch(name)
   const json = await response.json()
@@ -51,14 +39,13 @@ const resolveStockData = async (name, like, ip) => {
 }
 
 const compareStockData = async (left, right, like, ip) => {
-  let stock1 = await resolveStockData(left, like, ip)
-  let stock2 = await resolveStockData(right, like, ip)
-  
-  stock1['likes'] = stock1['likes'] - stock2['likes']
-  stock2['likes'] = stock2['likes'] - stock1['likes']
+  const stock1 = await resolveStockData(left, like, ip)
+  const stock2 = await resolveStockData(right, like, ip)
+
+  stock1['rel_likes'] = stock1['likes'] - stock2['likes'] 
+  stock2['rel_likes'] = stock2['likes'] - stock1['likes'] 
 
   const compared = [stock1, stock2].map((s) => {
-    s['rel_likes'] = s['likes']
     delete s['likes']
 
     return s
@@ -77,18 +64,18 @@ module.exports = function (app) {
     .get(async function (req, res) {
       var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress 
 
-      const inputStock = req.query['stock']
+      const stock = req.query['stock']
 
       // bool-check the like
       const like = JSON.parse(req.query['like'])
 
       let stockData = undefined
-      if(Array.isArray(inputStock)) {
-        const [left, right] = inputStock
+      if(Array.isArray(stock)) {
+        const [left, right] = stock
 
         stockData = await compareStockData(left, right, like, ip)
       } else {
-        stockData = await resolveStockData(inputStock, like, ip)
+        stockData = await resolveStockData(stock, like, ip)
       }
       return res.json({ stockData });
     });

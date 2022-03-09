@@ -60,5 +60,25 @@ suite('Functional Tests', function() {
       assert.equal('MSFT', body.stockData.stock)
       assert.typeOf(price, 'number')
     });
+
+    test("Viewing two stocks: GET request to /api/stock-prices/", async () => {
+      const { status, body } = await chai.request(server).get('/api/stock-prices').query({ like: false, stock: ['MSFT', 'GOOG'] })
+
+      assert.equal(status, 200)
+      assert.isTrue('stockData' in body)
+      assert.isTrue(Array.isArray(body.stockData))
+    });
+
+    test("Viewing two stocks and liking them: GET request to /api/stock-prices/", async () => {
+      const { status, body } = await chai.request(server).get('/api/stock-prices').query({ like: true, stock: ['MSFT', 'GOOG'] })
+      
+      assert.equal(status, 200)
+      assert.isTrue('stockData' in body)
+      assert.isTrue(Array.isArray(body.stockData))
+
+      // Since both stocks are liked, difference is 0
+      // so should equal
+      assert.equal(body.stockData[0]['rel_likes'], body.stockData[1]['rel_likes'])
+    })
 });
 
