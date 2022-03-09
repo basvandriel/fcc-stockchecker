@@ -5,6 +5,7 @@ const fetch = require('../lib/fetchProxy')
 const Stock = require('../lib/stock')
 const IP = require('../lib/ip')
 
+const hash = require('../lib/hash')
 
 const resolveStockData = async (name, like, ip) => {
   const response = await fetch(name)
@@ -62,8 +63,7 @@ module.exports = function (app) {
   // symbol = msft | goog | aapl | ...
   app.route('/api/stock-prices')
     .get(async function (req, res) {
-      var ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress 
-
+      var ip = hash(req.headers['x-forwarded-for'] || req.socket.remoteAddress) 
       const stock = req.query['stock']
 
       // bool-check the like
