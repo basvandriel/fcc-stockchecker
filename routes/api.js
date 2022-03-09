@@ -32,9 +32,11 @@ module.exports = function (app) {
 
       let likes = stock.likes.length
 
+      const existingIP = await IP.findOne({ value: ip, liked_stocks: {'_id': stock._id } }).exec()
+
       // Implement IP logic
       // Check if the like boolean is there and if the ip doesn't exist already in the likes
-      if(like && !await IP.findOne({ value: ip, liked_stocks: {'_id': stock._id } }).exec())  {
+      if(like && existingIP == null)  {
         likes++
 
         // Look up the ip if it exists, else upsert with pushed stock id
