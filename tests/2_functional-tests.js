@@ -3,52 +3,51 @@ const chai = require('chai');
 const assert = chai.assert;
 const server = require('../server');
 
-const { connection } = require('../lib/db')
+const IP = require('../lib/ip')
+const Stock = require('../lib/stock')
 
 chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
-  beforeEach((cb) => connection.collection('stocks').deleteMany({}, cb));
-  beforeEach((cb) => connection.collection('ips').deleteMany({}, cb));
+  afterEach((done) => {
+    IP.deleteMany({}).then(() => {
+      Stock.deleteMany({}, done)
+    })
+  })
 
 
-
-  test('Viewing one stock: GET request to /api/stock-prices/', function(done) { // <= Pass in done callback
+  test('Viewing one stock: GET request to /api/stock-prices/', async function() {
       const stock = 'GOOG';
-      chai.request(server).get('/api/stock-prices').query({ like: false, stock }).end(function(err, { status, body }){
-          assert.equal(status, 200)
-          assert.isTrue('stockData' in body)
+      const { status, body } =  await chai.request(server).get('/api/stock-prices').query({ like: false, stock })
 
-          const { price, likes } = body.stockData
+      assert.equal(status, 200)
+      assert.isTrue('stockData' in body)
 
-          assert.equal(likes, 0)
-          assert.equal(stock, body.stockData.stock)
-          assert.typeOf(price, 'number')
-        });
-        done();
+      const { price, likes } = body.stockData
+
+      assert.equal(likes, 0)
+      assert.equal(stock, body.stockData.stock)
+      assert.typeOf(price, 'number')
     });
-    test("Viewing one stock and liking it: GET request to /api/stock-prices/", function(done) {
+
+    test("Viewing one stock and liking it: GET request to /api/stock-prices/", async function() {
       const stock = 'AAPL';
-      chai.request(server).get('/api/stock-prices').query({ like: true, stock }).end(function(err, { status, body }){
-          assert.equal(status, 200)
-          assert.isTrue('stockData' in body)
+      const { status, body } = await chai.request(server).get('/api/stock-prices').query({ like: true, stock })
 
-          const { price, likes } = body.stockData
+      assert.equal(status, 200)
+      assert.isTrue('stockData' in body)
 
-          assert.equal(likes, 1)
-          assert.equal(stock, body.stockData.stock)
-          assert.typeOf(price, 'number')
-        });
-        done();
+      const { price, likes } = body.stockData
+
+      assert.equal(likes, 1)
+      assert.equal(stock, body.stockData.stock)
+      assert.typeOf(price, 'number')
     });
-
 
     test("Viewing the same stock and liking it again: GET request to /api/stock-prices/", async () => {
-      const stock = 'MSFT';
       const getAndLike = async () => {
-        return chai.request(server).get('/api/stock-prices').query({ like: true, stock })
+        return chai.request(server).get('/api/stock-prices').query({ like: true, stock: 'MSFT' })
       }
-
       await getAndLike()
       const { status, body } = await getAndLike()
 
@@ -58,7 +57,7 @@ suite('Functional Tests', function() {
       const { price, likes } = body.stockData
 
       assert.equal(likes, 1)
-      assert.equal(stock, body.stockData.stock)
+      assert.equal('MSFT', body.stockData.stock)
       assert.typeOf(price, 'number')
     });
 });
