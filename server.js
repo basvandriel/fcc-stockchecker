@@ -9,10 +9,18 @@ const fccTestingRoutes  = require('./routes/fcctesting.js');
 const runner            = require('./test-runner');
 const { connect }       = require('./lib/db')
 
+const helmet = require('helmet')
+
 connect()
 
 const app = express();
 
+app.use(helmet.contentSecurityPolicy({
+  directives: {
+    "script-src": ["'self'"],
+    "style-src": ["'self'"],
+  },
+}));
 app.use('/public', express.static(process.cwd() + '/public'));
 
 app.use(cors({origin: '*'})); //For FCC testing purposes only
